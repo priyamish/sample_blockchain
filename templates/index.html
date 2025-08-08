@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Blockchain</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .block-card {
+            border-left: 4px solid #007bff;
+            margin-bottom: 15px;
+        }
+        .genesis-block {
+            border-left-color: #28a745;
+        }
+        .transaction-item {
+            background-color: #f8f9fa;
+            border-radius: 5px;
+            padding: 10px;
+            margin: 5px 0;
+        }
+        .hash-text {
+            font-family: 'Courier New', monospace;
+            font-size: 0.8em;
+            word-break: break-all;
+        }
+        .status-badge {
+            font-size: 0.8em;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="#">
+                <i class="fas fa-link"></i> Simple Blockchain
+            </a>
+            <div class="navbar-nav ms-auto">
+                <span class="navbar-text">
+                    Node ID: <code>{{ node_identifier[:8] }}...</code>
+                </span>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <!-- Header Section -->
+        <div class="row mb-4">
+            <div class="col-md-8">
+                <h1><i class="fas fa-cube"></i> Blockchain Explorer</h1>
+                <p class="text-muted">A simple blockchain implementation with Python and Flask</p>
+            </div>
+            <div class="col-md-4 text-end">
+                <button class="btn btn-success btn-lg" onclick="mineBlock()">
+                    <i class="fas fa-hammer"></i> Mine Block
+                </button>
+            </div>
+        </div>
+
+        <!-- Stats Cards -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h5 class="card-title"><i class="fas fa-cubes"></i></h5>
+                        <h3 class="text-primary">{{ chain|length }}</h3>
+                        <p class="card-text">Total Blocks</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h5 class="card-title"><i class="fas fa-clock"></i></h5>
+                        <h3 class="text-warning">{{ pending_transactions|length }}</h3>
+                        <p class="card-text">Pending Transactions</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h5 class="card-title"><i class="fas fa-exchange-alt"></i></h5>
+                        <h3 class="text-info" id="totalTransactions">0</h3>
+                        <p class="card-text">Total Transactions</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h5 class="card-title"><i class="fas fa-shield-alt"></i></h5>
+                        <h3 class="text-success" id="chainValid">Valid</h3>
+                        <p class="card-text">Chain Status</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Transaction Form -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-plus"></i> Create New Transaction</h5>
+                    </div>
+                    <div class="card-body">
+                        <form id="transactionForm">
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <label for="sender" class="form-label">Sender Address</label>
+                                    <input type="text" class="form-control" id="sender" placeholder="Enter sender address" required>
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="recipient" class="form-label">Recipient Address</label>
+                                    <input type="text" class="form-control" id="recipient" placeholder="Enter recipient address" required>
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="amount" class="form-label">Amount</label>
+                                    <input type="number" class="form-control" id="amount" placeholder="Enter amount" step="0.01" required>
+                                </div>
+                            </div>
+                            <div class="mt-3">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-paper-plane"></i> Send Transaction
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Blockchain Display -->
+        <div class="row">
+            <div class="col-12">
+                <h3><i class="fas fa-list"></i> Blockchain</h3>
+                <div id="blockchainContainer">
+                    {% for block in chain %}
+                    <div class="card block-card {% if block.index == 0 %}genesis-block{% endif %}">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0">
+                                <i class="fas fa-cube"></i> Block #{{ block.index }}
+                                {% if block.index == 0 %}
+                                    <span class="badge bg-success status-badge">Genesis</span>
+                                {% endif %}
+                            </h5>
+                            <small class="text-muted">{{ block.timestamp }}</small>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h6>Hash:</h6>
+                                    <p class="hash-text">{{ block.hash }}</p>
+                                </div>
+                                <div class="col-md-6">
+                                    <h6>Previous Hash:</h6>
+                                    <p class="hash-text">{{ block.previous_hash }}</p>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h6>Nonce:</h6>
+                                    <p>{{ block.nonce }}</p>
+                                </div>
+                                <div class="col-md-6">
+                                    <h6>Transactions ({{ block.transactions|length }}):</h6>
+                                    {% if block.transactions %}
+                                        {% for transaction in block.transactions %}
+                                        <div class="transaction-item">
+                                            <strong>{{ transaction.from }}</strong> → <strong>{{ transaction.to }}</strong>
+                                            <br>
+                                            <span class="text-primary">{{ transaction.amount }}</span>
+                                        </div>
+                                        {% endfor %}
+                                    {% else %}
+                                        <p class="text-muted">No transactions</p>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Modal -->
+    <div class="modal fade" id="loadingModal" tabindex="-1">
+        <div class="modal-dialog modal-sm">
+            <div class="modal-content">
+                <div class="modal-body text-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-2">Mining block...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Calculate total transactions
+        function calculateTotalTransactions() {
+            let total = 0;
+            {% for block in chain %}
+                total += {{ block.transactions|length }};
+            {% endfor %}
+            document.getElementById('totalTransactions').textContent = total;
+        }
+
+        // Mine a new block
+        async function mineBlock() {
+            const modal = new bootstrap.Modal(document.getElementById('loadingModal'));
+            modal.show();
+            
+            try {
+                const response = await fetch('/mine');
+                const data = await response.json();
+                
+                if (response.ok) {
+                    alert(`Block mined successfully!\nIndex: ${data.index}\nHash: ${data.hash}`);
+                    location.reload();
+                } else {
+                    alert('Error mining block');
+                }
+            } catch (error) {
+                alert('Error: ' + error.message);
+            } finally {
+                modal.hide();
+            }
+        }
+
+        // Handle transaction form submission
+        document.getElementById('transactionForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const formData = {
+                sender: document.getElementById('sender').value,
+                recipient: document.getElementById('recipient').value,
+                amount: parseFloat(document.getElementById('amount').value)
+            };
+
+            try {
+                const response = await fetch('/transactions/new', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(formData)
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    alert('Transaction added successfully!');
+                    document.getElementById('transactionForm').reset();
+                    location.reload();
+                } else {
+                    alert('Error: ' + data.message || 'Failed to add transaction');
+                }
+            } catch (error) {
+                alert('Error: ' + error.message);
+            }
+        });
+
+        // Check chain validity
+        async function checkChainValidity() {
+            try {
+                const response = await fetch('/valid');
+                const data = await response.json();
+                
+                const statusElement = document.getElementById('chainValid');
+                if (data.is_valid) {
+                    statusElement.textContent = 'Valid';
+                    statusElement.className = 'text-success';
+                } else {
+                    statusElement.textContent = 'Invalid';
+                    statusElement.className = 'text-danger';
+                }
+            } catch (error) {
+                console.error('Error checking chain validity:', error);
+            }
+        }
+
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', function() {
+            calculateTotalTransactions();
+            checkChainValidity();
+        });
+    </script>
+</body>
+</html> 
